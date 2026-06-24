@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldCheck – Advanced Password Strength Analyzer</title>
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --card-bg: #161b22;
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --accent-glow: rgba(0, 210, 255, 0.3);
+            --weak: #ff4b2b;
+            --medium: #f9d423;
+            --strong: #00dbde;
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --success: #2ea043;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(58, 123, 213, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 210, 255, 0.1) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Container & Layout */
+        .container {
+            max-width: 900px;
+            width: 100%;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Main Card */
+        .analyzer-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 40px;
+            transition: transform 0.3s ease;
+        }
+
+        @media (max-width: 850px) {
+            .analyzer-card { grid-template-columns: 1fr; }
+        }
+
+        /* Input Styles */
+        .input-section h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .password-wrapper {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            background: #0d1117;
+            border: 2px solid #30363d;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .toggle-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.3s;
+        }
+
+        .toggle-btn:hover { color: var(--primary); }
+
+        /* Strength Meter */
+        .strength-meter {
+            margin-bottom: 30px;
+        }
+
+        .meter-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .progress-container {
+            height: 8px;
+            background: #30363d;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;
+        }
+
+        /* Requirements List */
+        .requirements {
+            list-style: none;
+        }
+
+        .requirements li {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: color 0.3s;
+        }
+
+        .requirements li i {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .requirements li.valid {
+            color: var(--text-main);
+        }
+
+        .requirements li.valid i {
+            color: var(--success);
+            animation: pop 0.3s ease-out;
+        }
+
+        /* Common Password Alert */
+        #warning-msg {
+            display: none;
+            background: rgba(255, 75, 43, 0.15);
+            border-left: 4px solid var(--weak);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: #ff8e7a;
+            font-size: 0.85rem;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Tips Sidebar */
+        .tips-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 25px;
+        }
+
+        .tips-section h4 {
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tip-item {
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding-bottom: 20px;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            header h1 { font-size: 1.8rem; }
+            .analyzer-card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>ShieldCheck</h1>
+            <p>Advanced Password Strength Analyzer</p>
+            <p style="font-size: 0.9rem; margin-top: 15px; opacity: 0.8;">
+                Cybercriminals use sophisticated brute-force attacks to crack weak passwords in seconds. 
+                ShieldCheck helps you build resilient defenses for your digital identity.
+            </p>
+        </header>
+
+        <main class="analyzer-card">
+            <div class="input-section">
+                <h3><i class="fas fa-shield-halved"></i> Security Check</h3>
+                
+                <div class="password-wrapper">
+                    <input type="password" id="password-input" placeholder="Enter password to analyze...">
+                    <i class="fas fa-eye toggle-btn" id="toggle-password"></i>
+                </div>
+
+                <div class="strength-meter">
+                    <div class="meter-label">
+                        <span>Security Level: <span id="strength-text">Empty</span></span>
+                        <span id="strength-percentage">0%</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="progress-bar"></div>
+                    </div>
+                </div>
+
+                <ul class="requirements">
+                    <li id="length"><i class="far fa-circle"></i> Minimum 8 characters</li>
+                    <li id="uppercase"><i class="far fa-circle"></i> At least one uppercase letter (A-Z)</li>
+                    <li id="lowercase"><i class="far fa-circle"></i> At least one lowercase letter (a-z)</li>
+                    <li id="number"><i class="far fa-circle"></i> At least one number (0-9)</li>
+                    <li id="special"><i class="far fa-circle"></i> At least one special character (!@#$%^&*)</li>
+                </ul>
+
+                <div id="warning-msg">
+                    <i class="fas fa-triangle-exclamation"></i> 
+                    This password is commonly used and can be easily guessed.
+                </div>
+            </div>
+
+            <div class="tips-section">
+                <h4><i class="fas fa-lightbulb"></i> Security Tips</h4>
+                <div class="tip-item">
+                    <strong>Avoid Personal Info:</strong> Don't use names, birthdays, or phone numbers.
+                </div>
+                <div class="tip-item">
+                    <strong>Use Passphrases:</strong> Long phrases like <code>Forest-Green-Running-99!</code> are harder to crack than random words.
+                </div>
+                <div class="tip-item">
+                    <strong>Unique for every account:</strong> Never reuse passwords across multiple platforms.
+                </div>
+                <div class="tip-item">
+                    <strong>Enable MFA:</strong> Even a strong password should be backed by Multi-Factor Authentication.
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            Developed for Cybersecurity Awareness and Education &copy; 2024
+        </footer>
+    </div>
+
+    <script>
+        const passwordInput = document.getElementById('password-input');
+        const togglePassword = document.getElementById('toggle-password');
+        const progressBar = document.getElementById('progress-bar');
+        const strengthText = document.getElementById('strength-text');
+        const strengthPercent = document.getElementById('strength-percentage');
+        const warningMsg = document.getElementById('warning-msg');
+
+        const requirements = {
+            length: document.getElementById('length'),
+            uppercase: document.getElementById('uppercase'),
+            lowercase: document.getElementById('lowercase'),
+            number: document.getElementById('number'),
+            special: document.getElementById('special')
+        };
+
+        const commonPasswords = ['123456', 'password', 'admin', 'qwerty', 'welcome', 'abc123'];
+
+        // Toggle Password Visibility
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            togglePassword.classList.toggle('fa-eye');
+            togglePassword.classList.toggle('fa-eye-slash');
+        });
+
+        // Validation Logic
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+            let score = 0;
+
+            // 1. Length
+            if (val.length >= 8) {
+                updateRequirement(requirements.length, true);
+                score++;
+            } else {
+                updateRequirement(requirements.length, false);
+            }
+
+            // 2. Uppercase
+            if (/[A-Z]/.test(val)) {
+                updateRequirement(requirements.uppercase, true);
+                score++;
+            } else {
+                updateRequirement(requirements.uppercase, false);
+            }
+
+            // 3. Lowercase
+            if (/[a-z]/.test(val)) {
+                updateRequirement(requirements.lowercase, true);
+                score++;
+            } else {
+                updateRequirement(requirements.lowercase, false);
+            }
+
+            // 4. Number
+            if (/[0-9]/.test(val)) {
+                updateRequirement(requirements.number, true);
+                score++;
+            } else {
+                updateRequirement(requirements.number, false);
+            }
+
+            // 5. Special Char
+            if (/[^A-Za-z0-9]/.test(val)) {
+                updateRequirement(requirements.special, true);
+                score++;
+            } else {
+                updateRequirement(requirements.special, false);
+            }
+
+            // Common Password Check
+            const isCommon = commonPasswords.includes(val.toLowerCase());
+            if (isCommon) {
+                warningMsg.style.display = 'block';
+                updateUI(1, "Compromised"); // Force UI to look weak
+            } else {
+                warningMsg.style.display = 'none';
+                updateUI(score, null);
+            }
+
+            if (val.length === 0) {
+                strengthText.innerText = "Empty";
+                strengthPercent.innerText = "0%";
+                progressBar.style.width = '0%';
+            }
+        });
+
+        function updateRequirement(element, isValid) {
+            const icon = element.querySelector('i');
+            if (isValid) {
+                element.classList.add('valid');
+                icon.classList.remove('far', 'fa-circle');
+                icon.classList.add('fas', 'fa-check-circle');
+            } else {
+                element.classList.remove('valid');
+                icon.classList.remove('fas', 'fa-check-circle');
+                icon.classList.add('far', 'fa-circle');
+            }
+        }
+
+        function updateUI(score, statusOverride) {
+            let width = (score / 5) * 100;
+            let color = '';
+            let text = '';
+
+            if (statusOverride === "Compromised") {
+                color = 'var(--weak)';
+                text = "Extremely Weak (Common)";
+                width = 10;
+            } else if (score <= 2) {
+                color = 'var(--weak)';
+                text = "Weak";
+            } else if (score <= 4) {
+                color = 'var(--medium)';
+                text = "Medium";
+            } else {
+                color = 'var(--strong)';
+                text = "Strong";
+            }
+
+            progressBar.style.width = width + '%';
+            progressBar.style.backgroundColor = color;
+            strengthText.innerText = text;
+            strengthText.style.color = color;
+            strengthPercent.innerText = width + '%';
+        }
+    </script>
+</body>
+</html>
